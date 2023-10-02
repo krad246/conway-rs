@@ -1,78 +1,67 @@
 use rayon::prelude::*;
+
 use std::sync::{Arc, OnceLock, RwLock};
 use std::thread::available_parallelism;
+
 fn main() {
-    let result = game_of_life(vec![vec![]], 3);
+    let result = game_of_life(vec![vec![Status::Live, Status::Live, Status::Live], vec![Status::Dead, Status::Live, Status::Dead], vec![Status::Live, Status::Live, Status::Dead]], 3);
     println!("{result:?}");
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[repr(u8)]
 enum Status {
     Live,
     Dead,
-}
-
-fn num_live_neighbors(cell: Status, row: usize, col: usize) -> usize {
-    todo!()
-}
-
-fn determine_next_state(status: Status, num_live_neighbors: usize) -> Status {
-    if status == Status::Live && (num_live_neighbors == 2 || num_live_neighbors == 3) {
-        return Status::Live;
-    }
-
-    if status == Status::Dead && num_live_neighbors == 3 {
-        return Status::Live;
-    }
-
-    Status::Dead
 }
 
 fn game_of_life(input_grid: Vec<Vec<Status>>, iterations: usize) -> Vec<Vec<Status>> {
     let m = input_grid.len();
     let n = input_grid[0].len();
     let chunk_size = m / 8;
-    //let mut cur_grid = input_grid;
     let output: Vec<Vec<OnceLock<Status>>> = vec![];
-
-    /* let compute = |input: &[&[Status]], &mut output|-> {
-        for (y, &row) in input.iter().enumerate() {
-            for (x, cell) in row.iter().enumerate() {
-                output[y][x] = determine_next_state(*cell, num_live_neighbors(x, y))
-            }
-        }
-    }; */
-
-    /* cur_grid = input_grid
-    .par_chunks(chunk_size)
-    .map( {
-        chunk.iter().map(|row: &Vec<Status>| {
-            chunk
-            row.iter().enumerate()
-                .map(|cell: &Status| num_live_neighbors(cell, row_num, col_num))
-                .collect()
-        })
-    })
-    .collect(); */
-
     todo!()
 }
+
 type Board = Vec<Vec<Arc<RwLock<Status>>>>;
 
 fn get_next_state(grid: &Board, r: usize, c: usize) -> Status {
+    let m = grid.len();
+    let n = grid[0].len();
+    let mut num_neighbors_alive  = 0;
     let cur_state = grid[r][c].read().expect("A writer has been poisoned");
-    todo!()
+    for i in r.checked_sub(1).unwrap_or(0)..std::cmp::max(r + 1, m) {
+        for j in c.checked_sub(1).unwrap_or(0)..std::cmp::max(c + 1, n) {
+            let neighbor_status = grid[i][j].read().expect("Lock was poisoned");
+            if *neighbor_status == Status::Live {
+                num_neighbors_alive += 1;
+            }
+        }
+    }
+    if *cur_state == Status::Live {
+        num_neighbors_alive -= 1;
+    }
+
+    if num_neighbors_alive == 2 || num_neighbors_alive == 3 {
+        return Status::Live;
+    }
+
+    if num_neighbors_alive == 3 && *cur_state == Status::Dead {
+        return Status::Live;
+    }
+    Status::Dead
 }
 
-fn game_of_life_tarun(input_grid: Vec<Vec<Status>>, iterations: usize) -> Vec<Vec<Status>> {
+fn game_of_life_tarun(input_grid: Vec<Vec<Status>>, iterations: usize) {
     let m = input_grid.len();
     let n = input_grid[0].len();
+
     let available_workers = match available_parallelism() {
         Ok(num) => num.get(),
         Err(_) => 8,
     };
-    let chunk_size = m / available_workers;
 
+    let chunk_size = m / available_workers;
     let mut cur_grid: Board = input_grid
         .into_iter()
         .map(|row| {
@@ -98,9 +87,9 @@ fn game_of_life_tarun(input_grid: Vec<Vec<Status>>, iterations: usize) -> Vec<Ve
                     }
                 }
             });
+        std::mem::swap(&mut cur_grid, &mut next_grid);
     }
 
-    std::mem::swap(&mut cur_grid, &mut next_grid);
+    dbg!(cur_grid);
 
-    todo!()
 }
