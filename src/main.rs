@@ -1,26 +1,37 @@
+use iced::{window, Application, Settings};
 use rayon::prelude::*;
+use ui::GameOfLife;
 
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::{Arc, RwLock};
 use std::thread::available_parallelism;
+mod ui;
 
-fn main() {
-    let result = game_of_life(vec![vec![Status::Live, Status::Live, Status::Live], vec![Status::Dead, Status::Live, Status::Dead], vec![Status::Live, Status::Live, Status::Dead]], 3);
-    println!("{result:?}");
+fn main() -> iced::Result {
+    /* let result = game_of_life(
+        vec![
+            vec![Status::Alive, Status::Alive, Status::Alive],
+            vec![Status::Dead, Status::Alive, Status::Dead],
+            vec![Status::Alive, Status::Alive, Status::Dead],
+        ],
+        3,
+    );
+    println!("{result:?}"); */
+    //tracing_subscriber::fmt::init();
+
+    GameOfLife::run(Settings {
+        antialiasing: true,
+        window: window::Settings {
+            position: window::Position::Centered,
+            ..window::Settings::default()
+        },
+        ..Settings::default()
+    })
 }
 
 #[derive(Debug, PartialEq, Eq)]
-#[repr(u8)]
 enum Status {
-    Live,
+    Alive,
     Dead,
-}
-
-fn game_of_life(input_grid: Vec<Vec<Status>>, iterations: usize) -> Vec<Vec<Status>> {
-    let m = input_grid.len();
-    let n = input_grid[0].len();
-    let chunk_size = m / 8;
-    let output: Vec<Vec<OnceLock<Status>>> = vec![];
-    todo!()
 }
 
 type Board = Vec<Vec<Arc<RwLock<Status>>>>;
@@ -28,31 +39,31 @@ type Board = Vec<Vec<Arc<RwLock<Status>>>>;
 fn get_next_state(grid: &Board, r: usize, c: usize) -> Status {
     let m = grid.len();
     let n = grid[0].len();
-    let mut num_neighbors_alive  = 0;
+    let mut num_neighbors_alive = 0;
     let cur_state = grid[r][c].read().expect("A writer has been poisoned");
     for i in r.checked_sub(1).unwrap_or(0)..std::cmp::max(r + 1, m) {
         for j in c.checked_sub(1).unwrap_or(0)..std::cmp::max(c + 1, n) {
             let neighbor_status = grid[i][j].read().expect("Lock was poisoned");
-            if *neighbor_status == Status::Live {
+            if *neighbor_status == Status::Alive {
                 num_neighbors_alive += 1;
             }
         }
     }
-    if *cur_state == Status::Live {
+    if *cur_state == Status::Alive {
         num_neighbors_alive -= 1;
     }
 
     if num_neighbors_alive == 2 || num_neighbors_alive == 3 {
-        return Status::Live;
+        return Status::Alive;
     }
 
     if num_neighbors_alive == 3 && *cur_state == Status::Dead {
-        return Status::Live;
+        return Status::Alive;
     }
     Status::Dead
 }
 
-fn game_of_life_tarun(input_grid: Vec<Vec<Status>>, iterations: usize) {
+fn game_of_life(input_grid: Vec<Vec<Status>>, iterations: usize) {
     let m = input_grid.len();
     let n = input_grid[0].len();
 
@@ -91,5 +102,4 @@ fn game_of_life_tarun(input_grid: Vec<Vec<Status>>, iterations: usize) {
     }
 
     dbg!(cur_grid);
-
 }
